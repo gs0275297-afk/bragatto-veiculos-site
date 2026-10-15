@@ -1,15 +1,36 @@
 import { promises as fs } from "node:fs";
 import path from "node:path";
+import { del, put } from "@vercel/blob";
 import { AwsClient } from "aws4fetch";
 
 /**
- * Armazenamento de imagens.
+ * Armazenamento de imagens e modelos 3D.
  *
- * - `local` (padrão): grava em UPLOAD_DIR e serve pela rota /media/[...key].
+ * - `local`: grava em UPLOAD_DIR e serve pela rota /media/[...key].
  *   Adequado para servidor próprio/VPS com disco persistente.
+ * - `vercel-blob`: Vercel Blob (ativado automaticamente quando existe BLOB_READ_WRITE_TOKEN).
  * - `s3`: qualquer serviço compatível com S3 (Cloudflare R2, AWS S3, Backblaze B2...).
- *   Necessário em hospedagens serverless (ex.: Vercel), onde o disco não é persistente.
+ * Em hospedagem serverless (Vercel) o disco não é persistente: use `vercel-blob` ou `s3`.
  */
+export type StorageDriver = "local" | "s3" | "vercel-blob";
+
+export function storageDriver(): StorageDriver {
+  const explicit = process.env.STORAGE_DRIVER;
+  if (explicit === "local" || explicit === "s3" || explicit === "vercel-blob") return explicit;
+  if (process.env.BLOB_READ_WRITE_TOKEN) return "vercel-blob";
+  if (process.env.S3_BUCKET && process.env.S3_ENDPOINT) return "s3";
+  return "local";
+}
+
+/** URL pública base do Vercel Blob: https://<store>.public.blob.vercel-storage.com */
+export function blobPublicBase(): string | null {
+  if (process.env.BLOB_PUBLIC_BASE_URL) return process.env.BLOB_PUBLIC_BASE_URL.replace(/\/$/, "");
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) return null;
+  // formato do token: vercel_blob_rw_<storeId>_<segredo>
+  const storeId = (token.split("_")[3] ?? "").replace(/^store_/, "").toLowerCase();
+  return storeId ? `https://${storeId}.public.blob.vercel-storage.com` : null;
+}
 export interface Storage {
   put(key: string, body: Buffer, contentType: string): Promise<void>;
   delete(key: string): Promise<void>;
@@ -80,9 +101,36 @@ function createS3Storage(): Storage {
   };
 }
 
+function createBlobStorage(): Storage {
+  const base = blobPublicBase();
+  if (!process.env.BLOB_READ_WRITE_TOKEN || !base) {
+    throw new Error("STORAGE_DRIVER=vercel-blob requer BLOB_READ_WRITE_TOKEN (crie um Blob store no painel da Vercel).");
+  }
+  return {
+    async put(key, body, contentType) {
+      await put(safeKey(key), body, {
+        access: "public",
+        contentType,
+        addRandomSuffix: false,
+        allowOverwrite: true,
+        cacheControlMaxAge: 31536000,
+      });
+    },
+    async delete(key) {
+      await del(`${base}/${safeKey(key)}`);
+    },
+    publicUrl(key) {
+      return `${base}/${safeKey(key)}`;
+    },
+  };
+}
+
 let instance: Storage | undefined;
 
 export function storage(): Storage {
-  if (!instance) instance = process.env.STORAGE_DRIVER === "s3" ? createS3Storage() : localStorage;
+  if (!instance) {
+    const driver = storageDriver();
+    instance = driver === "s3" ? createS3Storage() : driver === "vercel-blob" ? createBlobStorage() : localStorage;
+  }
   return instance;
 }

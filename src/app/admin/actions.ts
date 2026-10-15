@@ -11,8 +11,8 @@ import { DUMMY_HASH, hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "@
 import { canAttempt, clearFailures, registerFailure } from "@/lib/auth/rate-limit";
 import { createSession, destroySession, requireOwner, requireUser, revokeUserSessions } from "@/lib/auth/session";
 import { VEHICLES_TAG } from "@/lib/data/vehicles";
-import { validateModelUrl } from "@/lib/model3d";
-import { storage } from "@/lib/storage";
+import { validateGlb, validateModelUrl } from "@/lib/model3d";
+import { blobPublicBase, storage } from "@/lib/storage";
 import { model3dMetaSchema, photoUpdateSchema, vehicleInputSchema } from "@/lib/vehicle-input";
 import { createVehicle, deletePhoto, deleteVehicle, reorderPhotos, updateVehicle } from "@/lib/vehicle-service";
 
@@ -169,6 +169,50 @@ export async function setModel3dUrlAction(_prev: FormState, formData: FormData):
     .where(eq(schema.vehicles.id, id));
   updateTag(VEHICLES_TAG);
   return { ok: true, message: "URL validada e associada ao veículo." };
+}
+
+/**
+ * Associa um GLB enviado diretamente ao Vercel Blob. O arquivo é baixado e validado aqui;
+ * se for inválido, é apagado do Blob e nada muda no veículo.
+ */
+export async function attachBlobModelAction(vehicleId: string, url: string): Promise<FormState> {
+  await requireUser();
+  const base = blobPublicBase();
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return { message: "URL do upload inválida." };
+  }
+  const key = decodeURIComponent(parsed.pathname.replace(/^\//, ""));
+  if (!base || parsed.origin !== new URL(base).origin || !key.startsWith(`veiculos/${vehicleId}/3d/`) || !key.endsWith(".glb")) {
+    return { message: "Arquivo fora do armazenamento autorizado." };
+  }
+  const discard = () => storage().delete(key).catch(() => undefined);
+
+  const res = await fetch(url, { cache: "no-store" }).catch(() => null);
+  if (!res?.ok) {
+    await discard();
+    return { message: "Não foi possível ler o arquivo enviado." };
+  }
+  const buffer = Buffer.from(await res.arrayBuffer());
+  const check = validateGlb(buffer);
+  if (!check.ok) {
+    await discard();
+    return { message: check.error };
+  }
+  const [cur] = await db.select().from(schema.vehicles).where(eq(schema.vehicles.id, vehicleId));
+  if (!cur) {
+    await discard();
+    return { message: "Veículo não encontrado." };
+  }
+  if (cur.model3dKey && cur.model3dKey !== key) await storage().delete(cur.model3dKey).catch(() => undefined);
+  await db
+    .update(schema.vehicles)
+    .set({ model3dKey: key, model3dUrl: null, model3dFormat: "glb", model3dSizeBytes: buffer.length, updatedAt: Date.now() })
+    .where(eq(schema.vehicles.id, vehicleId));
+  updateTag(VEHICLES_TAG);
+  return { ok: true, message: "Modelo enviado e validado." };
 }
 
 export async function removeModel3dAction(formData: FormData) {

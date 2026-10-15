@@ -100,11 +100,16 @@ npx @gltf-transform/cli optimize entrada.glb saida.glb --compress draco --textur
 
 **Opção A — servidor próprio/VPS (mais simples):** `STORAGE_DRIVER=local`, `DATABASE_URL=file:./data/bragatto.db`, disco persistente para `data/`. Rode `npm run build && npm run db:migrate && npm start` atrás de um proxy HTTPS (Nginx/Caddy). Faça backup da pasta `data/`.
 
-**Opção B — Vercel ou outra plataforma serverless:** o disco não é persistente, então:
-1. Crie um banco **Turso** → `DATABASE_URL=libsql://…` e `DATABASE_AUTH_TOKEN`.
-2. Crie um bucket **Cloudflare R2** (ou S3) com acesso público por domínio → `STORAGE_DRIVER=s3`, `S3_ENDPOINT`, `S3_BUCKET`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`, `S3_PUBLIC_URL`. Libere CORS (GET/HEAD) para o domínio do site, necessário para o 3D.
-3. `npm run db:migrate` e `npm run db:seed` apontando para o Turso (as fotos do seed serão enviadas ao bucket).
-4. Defina `NEXT_PUBLIC_SITE_URL` com o domínio final (canonical, sitemap, Open Graph e links compartilhados).
+**Opção B — Vercel (recomendada):** o disco da Vercel não é persistente, então o banco e as fotos ficam em serviços conectados pelo próprio painel:
+
+1. **Banco:** no projeto da Vercel → *Storage* → *Create Database* → **Turso** (Marketplace) → conectar ao projeto. Isso cria `TURSO_DATABASE_URL` e `TURSO_AUTH_TOKEN`.
+2. **Fotos e 3D:** *Storage* → *Create* → **Blob** → conectar ao projeto. Isso cria `BLOB_READ_WRITE_TOKEN`.
+3. **Primeiro acesso:** em *Settings → Environment Variables*, crie `ADMIN_EMAIL` e `ADMIN_PASSWORD` (mín. 10 caracteres; opcional `ADMIN_NAME`).
+4. *Deployments* → **Redeploy**.
+
+No build, o script `scripts/prebuild.ts` confere essas variáveis (e explica o que falta, se for o caso), aplica as migrações, carrega o **estoque inicial real uma única vez** (as fotos vão para o Blob) e cria o administrador se ainda não houver usuários. Depois do primeiro login, troque a senha em *Minha conta* e apague `ADMIN_PASSWORD` das variáveis.
+
+`NEXT_PUBLIC_SITE_URL` é opcional na Vercel (usa o domínio de produção); defina quando tiver domínio próprio. Com Blob, o modelo 3D vai do navegador direto para o armazenamento (sem o limite de 4,5 MB das funções) e é validado no servidor antes de ser associado; fotos grandes são reduzidas no navegador antes do envio. Com R2/S3 na Vercel, o upload de GLB pelo painel fica limitado a ~4 MB — para arquivos maiores, use a opção de URL.
 
 Nenhuma credencial vai para o navegador: todas as variáveis acima são lidas apenas no servidor (só `NEXT_PUBLIC_SITE_URL` é pública).
 

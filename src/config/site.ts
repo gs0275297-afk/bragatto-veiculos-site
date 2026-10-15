@@ -10,7 +10,10 @@ export const site = {
   shortName: "Bragatto",
   description:
     "Compra, venda e troca de veículos em Três Lagoas – MS. Consulte o estoque da Bragatto Veículos e fale com a loja pelo WhatsApp.",
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000").replace(/\/$/, ""),
+  url: (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000")
+  ).replace(/\/$/, ""),
   locale: "pt_BR",
 
   whatsapp: {

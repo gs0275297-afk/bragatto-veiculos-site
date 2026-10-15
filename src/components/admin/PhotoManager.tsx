@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { deletePhotoAction, reorderPhotosAction, updatePhotoAction } from "@/app/admin/actions";
+import { prepareImageForUpload } from "@/lib/client-image";
 import { PHOTO_ANGLES, type PhotoAngle, type PhotoKind } from "@/lib/db/schema";
 import { angleLabel } from "@/lib/vehicle-labels";
 
@@ -115,7 +116,8 @@ export function PhotoManager({ vehicleId, initial }: { vehicleId: string; initia
     setUploads(arr.map((f) => ({ name: f.name, progress: 0 })));
     for (const [i, file] of arr.entries()) {
       try {
-        const photo = await uploadFile(`/api/admin/vehicles/${vehicleId}/photos`, file, kind, (p) =>
+        const ready = await prepareImageForUpload(file);
+        const photo = await uploadFile(`/api/admin/vehicles/${vehicleId}/photos`, ready, kind, (p) =>
           setUploads((u) => u.map((x, j) => (j === i ? { ...x, progress: p } : x))),
         );
         setPhotos((p) => [...p, { ...photo, kind }]);
@@ -176,7 +178,7 @@ export function PhotoManager({ vehicleId, initial }: { vehicleId: string; initia
       >
         <Icon name="upload" size={24} />
         <strong>Arraste fotos aqui ou clique para selecionar</strong>
-        <span className="a-help">JPG, PNG, WebP ou AVIF · até 15 MB cada · metadados (inclusive GPS) são removidos</span>
+        <span className="a-help">JPG, PNG, WebP ou AVIF · fotos grandes são reduzidas automaticamente · metadados (inclusive GPS) são removidos</span>
         <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp,image/avif" multiple onChange={(e) => e.target.files && onFiles(e.target.files)} />
       </label>
 

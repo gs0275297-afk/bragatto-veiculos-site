@@ -4,7 +4,15 @@ import { useRouter } from "next/navigation";
 import { startTransition, useActionState, useState } from "react";
 import { Icon } from "@/components/ui/Icon";
 import { Model3DViewer } from "@/components/vehicles/viewer3d/Model3DViewer";
-import { removeModel3dAction, saveModel3dMetaAction, setModel3dUrlAction, type FormState } from "@/app/admin/actions";
+import { upload as uploadToBlob } from "@vercel/blob/client";
+import {
+  attachBlobModelAction,
+  removeModel3dAction,
+  saveModel3dMetaAction,
+  setModel3dUrlAction,
+  type FormState,
+} from "@/app/admin/actions";
+import { prepareImageForUpload } from "@/lib/client-image";
 import type { Model3DFormat, Model3DKind } from "@/lib/db/schema";
 
 export type Model3DAdminState = {
@@ -48,6 +56,7 @@ export function Model3DManager({
   state: s,
   maxMb,
   allowedHosts,
+  uploadMode,
 }: {
   vehicleId: string;
   vehicleName: string;
@@ -55,6 +64,8 @@ export function Model3DManager({
   state: Model3DAdminState;
   maxMb: number;
   allowedHosts: string[];
+  /** direct-blob: o arquivo vai do navegador direto ao Vercel Blob (sem limite de 4,5 MB da função). */
+  uploadMode: "server" | "direct-blob";
 }) {
   const router = useRouter();
   const [metaState, metaAction, metaPending] = useActionState<FormState, FormData>(saveModel3dMetaAction, {});
@@ -75,7 +86,21 @@ export function Model3DManager({
     }
     setUpload({ target, progress: 0 });
     try {
-      await send(`/api/admin/vehicles/${vehicleId}/model3d`, file, target, (p) => setUpload({ target, progress: p }));
+      if (target === "model" && uploadMode === "direct-blob") {
+        const safeName = file.name.toLowerCase().replace(/[^a-z0-9.]+/g, "-");
+        const blob = await uploadToBlob(`veiculos/${vehicleId}/3d/${safeName}`, file, {
+          access: "public",
+          contentType: "model/gltf-binary",
+          handleUploadUrl: `/api/admin/vehicles/${vehicleId}/model3d/blob`,
+          multipart: file.size > 8 * 1048576,
+          onUploadProgress: ({ percentage }) => setUpload({ target, progress: percentage / 100 }),
+        });
+        const result = await attachBlobModelAction(vehicleId, blob.url);
+        if (!result.ok) throw new Error(result.message ?? "Arquivo recusado.");
+      } else {
+        const ready = target === "poster" ? await prepareImageForUpload(file) : file;
+        await send(`/api/admin/vehicles/${vehicleId}/model3d`, ready, target, (p) => setUpload({ target, progress: p }));
+      }
       setUpload(null);
       setPreview(false);
       router.refresh();

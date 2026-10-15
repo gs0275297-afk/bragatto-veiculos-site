@@ -10,7 +10,16 @@ if (process.env.S3_PUBLIC_URL) {
   });
 }
 
+// fotos e modelos no Vercel Blob
+remotePatterns.push({ protocol: "https", hostname: "*.public.blob.vercel-storage.com", pathname: "/**" });
+
+/** URL pública do site: definida explicitamente ou, na Vercel, o domínio de produção do projeto. */
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000");
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_SITE_URL: siteUrl },
   cacheComponents: true,
   partialPrefetching: true,
   serverExternalPackages: ["sharp", "@libsql/client"],

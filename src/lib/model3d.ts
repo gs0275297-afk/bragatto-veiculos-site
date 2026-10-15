@@ -1,4 +1,5 @@
 import "server-only";
+import { blobPublicBase } from "@/lib/storage";
 import { MODEL3D_MAX_BYTES } from "@/lib/vehicle-input";
 
 /** Extensões glTF suportadas pelo visualizador (as demais "requeridas" são recusadas). */
@@ -58,6 +59,8 @@ export function allowedModelHosts(): string[] {
     .map((h) => h.trim().toLowerCase())
     .filter(Boolean);
   if (process.env.S3_PUBLIC_URL) hosts.push(new URL(process.env.S3_PUBLIC_URL).hostname.toLowerCase());
+  const blob = blobPublicBase();
+  if (blob) hosts.push(new URL(blob).hostname);
   return hosts;
 }
 

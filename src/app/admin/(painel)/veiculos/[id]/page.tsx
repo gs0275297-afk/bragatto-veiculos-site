@@ -10,6 +10,7 @@ import { deleteVehicleAction } from "@/app/admin/actions";
 import { requireUser } from "@/lib/auth/session";
 import { getAdminVehicle } from "@/lib/data/admin";
 import { allowedModelHosts } from "@/lib/model3d";
+import { storageDriver } from "@/lib/storage";
 import { MODEL3D_MAX_BYTES } from "@/lib/vehicle-input";
 
 export const metadata: Metadata = { title: "Editar veículo" };
@@ -30,6 +31,11 @@ async function Editor({ params, searchParams }: PageProps<"/admin/veiculos/[id]"
   if (!v) notFound();
   const name = [v.brand, v.model, v.version].filter(Boolean).join(" ");
   const cover = v.photos.find((p) => p.kind === "galeria");
+  const driver = storageDriver();
+  const uploadMode = driver === "vercel-blob" ? "direct-blob" : "server";
+  // em serverless (Vercel) com envio pelo servidor, cada requisição é limitada a ~4,5 MB
+  const maxModelMb = Math.round(MODEL3D_MAX_BYTES / 1048576);
+  const effectiveMaxMb = process.env.VERCEL && uploadMode === "server" ? Math.min(4, maxModelMb) : maxModelMb;
 
   return (
     <>
@@ -82,8 +88,9 @@ async function Editor({ params, searchParams }: PageProps<"/admin/veiculos/[id]"
           vehicleId={v.id}
           vehicleName={name}
           fallbackPoster={cover?.src ?? null}
-          maxMb={Math.round(MODEL3D_MAX_BYTES / 1048576)}
+          maxMb={effectiveMaxMb}
           allowedHosts={allowedModelHosts()}
+          uploadMode={uploadMode}
           state={{
             enabled: v.model3dEnabled,
             kind: v.model3dKind,
