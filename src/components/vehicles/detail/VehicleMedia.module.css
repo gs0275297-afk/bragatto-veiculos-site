@@ -1,0 +1,63 @@
+.media {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--line-2);
+  background: transparent;
+  color: var(--text-2);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  transition: all var(--t-micro) ease;
+}
+.tab:hover {
+  color: var(--text);
+  border-color: var(--line-3);
+}
+.tab[aria-selected="true"] {
+  color: var(--text);
+  border-color: var(--red);
+  background: rgb(227 18 28 / 0.1);
+}
+
+.panels {
+  position: relative;
+  height: clamp(340px, 62svh, 680px);
+}
+.panel {
+  height: 100%;
+}
+.panel[hidden] {
+  display: none;
+}
+
+@media (max-width: 640px) {
+  .panels {
+    height: auto;
+    aspect-ratio: 4 / 4.6;
+  }
+}
+
+/* no celular a mídia vai de borda a borda; abas e miniaturas mantêm a margem lateral */
+@media (max-width: 900px) {
+  .tabs {
+    padding-inline: var(--gutter);
+  }
+  .media :global(.thumbs-strip) {
+    padding-inline: var(--gutter);
+  }
+}

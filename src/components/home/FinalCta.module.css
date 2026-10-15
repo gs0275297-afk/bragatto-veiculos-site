@@ -1,0 +1,62 @@
+.section {
+  position: relative;
+  padding-block: clamp(80px, 11vw, 168px);
+  background:
+    radial-gradient(60% 120% at 0% 100%, rgb(227 18 28 / 0.22), transparent 60%),
+    var(--carbon);
+  border-top: 1px solid var(--line);
+  overflow: hidden;
+}
+.section::after {
+  /* arco do emblema — eco discreto da logo */
+  content: "";
+  position: absolute;
+  right: -12vw;
+  top: 50%;
+  width: 52vw;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgb(227 18 28 / 0.35);
+  border-left-color: transparent;
+  border-bottom-color: transparent;
+  transform: translateY(-50%) rotate(-20deg);
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
+  gap: 48px;
+  align-items: end;
+}
+.title {
+  font-size: var(--fs-display);
+  font-weight: 700;
+  font-variation-settings: "wdth" 120;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+.side p {
+  color: var(--text-2);
+  max-width: 40ch;
+}
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 28px;
+}
+
+@media (max-width: 860px) {
+  .inner {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 480px) {
+  .actions :global(.btn) {
+    flex: 1 1 100%;
+  }
+}

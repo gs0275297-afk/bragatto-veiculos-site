@@ -1,0 +1,55 @@
+.spin {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.stage {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  background: #0b0b0d;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+}
+.stage:focus-visible {
+  outline: 2px solid var(--red-hot);
+  outline-offset: -2px;
+}
+.frame {
+  object-fit: contain;
+  opacity: 0;
+}
+.frame[data-active] {
+  opacity: 1;
+}
+.loading {
+  position: absolute;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  padding: 6px 10px;
+  background: rgb(7 7 8 / 0.75);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--carbon);
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.range {
+  flex: 1;
+  accent-color: var(--red);
+}
+.note {
+  padding: 0 14px 10px;
+  background: var(--carbon);
+  font-size: var(--fs-xs);
+  color: var(--muted);
+}

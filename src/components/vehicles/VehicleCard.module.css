@@ -1,0 +1,249 @@
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  background: var(--carbon);
+  border: 1px solid var(--line);
+  transition: border-color var(--t-ui) ease, transform var(--t-ui) var(--ease-out);
+}
+.card:hover {
+  border-color: var(--line-3);
+}
+
+.media {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--graphite);
+}
+.media::after {
+  /* linha de "luz de freio" que cresce no hover */
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 2px;
+  width: 100%;
+  background: var(--red);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 600ms var(--ease-out);
+}
+.card:hover .media::after,
+.card:focus-within .media::after {
+  transform: scaleX(1);
+}
+
+.img {
+  transition:
+    transform 1200ms var(--ease-out),
+    opacity 600ms ease;
+}
+.card:hover .img {
+  transform: scale(1.045);
+}
+.alt {
+  opacity: 0;
+}
+@media (hover: hover) {
+  .card:hover .alt {
+    opacity: 1;
+  }
+}
+
+.noPhoto {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  color: var(--dim);
+  font-size: var(--fs-xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background:
+    repeating-linear-gradient(135deg, transparent 0 14px, rgb(255 255 255 / 0.025) 14px 15px),
+    var(--graphite);
+}
+
+.flags {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 6px;
+  z-index: 2;
+}
+.flag {
+  padding: 5px 9px;
+  font-family: var(--font-mono);
+  font-size: var(--fs-micro);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgb(7 7 8 / 0.82);
+  backdrop-filter: blur(6px);
+  border: 1px solid var(--line-2);
+}
+.flag[data-status="reservado"] {
+  color: var(--warning);
+  border-color: rgb(242 178 51 / 0.4);
+}
+.flag[data-status="vendido"] {
+  color: var(--red-hot);
+  border-color: rgb(255 43 53 / 0.4);
+}
+.demo {
+  color: #8ec5ff;
+  border-color: rgb(142 197 255 / 0.4);
+}
+
+.count {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  padding: 4px 8px;
+  font-size: var(--fs-micro);
+  letter-spacing: 0.08em;
+  color: var(--text-2);
+  background: rgb(7 7 8 / 0.7);
+}
+
+.body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  padding: 20px 20px 18px;
+}
+.brand {
+  font-size: var(--fs-micro);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.title {
+  margin-top: 6px;
+  font-size: 1.2rem;
+  font-weight: 620;
+  font-variation-settings: "wdth" 108;
+  letter-spacing: -0.015em;
+  line-height: 1.2;
+}
+.stretched::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+.stretched:focus-visible {
+  outline: none;
+}
+.stretched:focus-visible::after {
+  outline: 2px solid var(--red-hot);
+  outline-offset: -2px;
+}
+
+.specs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 0;
+  margin-top: 12px;
+  font-size: var(--fs-xs);
+  color: var(--text-2);
+}
+.specs span:not(:last-child)::after {
+  content: "";
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 10px 2px;
+  background: var(--red);
+  vertical-align: middle;
+}
+
+.foot {
+  margin-top: auto;
+  padding-top: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+.price {
+  font-size: 1.45rem;
+  font-weight: 700;
+  font-variation-settings: "wdth" 112;
+  letter-spacing: -0.02em;
+  font-feature-settings: "tnum" 1;
+}
+.consult {
+  font-size: var(--fs-sm);
+  font-weight: 600;
+  color: var(--text-2);
+}
+
+.wa {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex: none;
+  border: 1px solid var(--line-2);
+  color: var(--text-2);
+  transition: all var(--t-micro) ease;
+}
+.wa:hover {
+  color: #fff;
+  border-color: #25d366;
+  background: rgb(37 211 102 / 0.14);
+}
+
+/* variante grande (vitrine editorial da home) */
+.card[data-size="large"] .media {
+  aspect-ratio: auto;
+  flex: 1;
+  min-height: 360px;
+}
+.card[data-size="large"] .title {
+  font-size: var(--fs-xl);
+  letter-spacing: -0.03em;
+}
+.card[data-size="large"] .body {
+  padding: 28px;
+}
+.card[data-size="large"] .price {
+  font-size: 1.9rem;
+}
+
+/* variante em linha (lista ao lado do destaque) */
+.card[data-size="row"] {
+  flex-direction: row;
+}
+.card[data-size="row"] .media {
+  width: 44%;
+  flex: none;
+  aspect-ratio: auto;
+  min-height: 180px;
+}
+.card[data-size="row"] .body {
+  padding: 18px 20px;
+}
+.card[data-size="row"] .count {
+  display: none;
+}
+@media (max-width: 480px) {
+  .card[data-size="row"] {
+    flex-direction: column;
+  }
+  .card[data-size="row"] .media {
+    width: 100%;
+    aspect-ratio: 4 / 3;
+    min-height: 0;
+  }
+}

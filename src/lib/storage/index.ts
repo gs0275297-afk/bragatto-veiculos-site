@@ -1,0 +1,88 @@
+import { promises as fs } from "node:fs";
+import path from "node:path";
+import { AwsClient } from "aws4fetch";
+
+/**
+ * Armazenamento de imagens.
+ *
+ * - `local` (padrão): grava em UPLOAD_DIR e serve pela rota /media/[...key].
+ *   Adequado para servidor próprio/VPS com disco persistente.
+ * - `s3`: qualquer serviço compatível com S3 (Cloudflare R2, AWS S3, Backblaze B2...).
+ *   Necessário em hospedagens serverless (ex.: Vercel), onde o disco não é persistente.
+ */
+export interface Storage {
+  put(key: string, body: Buffer, contentType: string): Promise<void>;
+  delete(key: string): Promise<void>;
+  publicUrl(key: string): string;
+}
+
+export const uploadDir = path.resolve(/*turbopackIgnore: true*/ process.env.UPLOAD_DIR ?? "./data/uploads");
+
+function safeKey(key: string) {
+  const normalized = path.posix.normalize(key).replace(/^\/+/, "");
+  if (normalized.startsWith("..") || normalized.includes("\0")) throw new Error("Chave de arquivo inválida");
+  return normalized;
+}
+
+export function resolveLocalPath(key: string): string {
+  const full = path.resolve(uploadDir, safeKey(key));
+  if (!full.startsWith(uploadDir + path.sep)) throw new Error("Chave de arquivo inválida");
+  return full;
+}
+
+const localStorage: Storage = {
+  async put(key, body) {
+    const full = resolveLocalPath(key);
+    await fs.mkdir(path.dirname(full), { recursive: true });
+    await fs.writeFile(full, body);
+  },
+  async delete(key) {
+    await fs.rm(resolveLocalPath(key), { force: true });
+  },
+  publicUrl(key) {
+    return `/media/${safeKey(key)}`;
+  },
+};
+
+function createS3Storage(): Storage {
+  const required = ["S3_ENDPOINT", "S3_BUCKET", "S3_ACCESS_KEY_ID", "S3_SECRET_ACCESS_KEY", "S3_PUBLIC_URL"] as const;
+  const missing = required.filter((k) => !process.env[k]);
+  if (missing.length) {
+    throw new Error(`STORAGE_DRIVER=s3 requer as variáveis: ${missing.join(", ")}`);
+  }
+  const client = new AwsClient({
+    accessKeyId: process.env.S3_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.S3_SECRET_ACCESS_KEY!,
+    region: process.env.S3_REGION || "auto",
+    service: "s3",
+  });
+  const endpoint = process.env.S3_ENDPOINT!.replace(/\/$/, "");
+  const bucket = process.env.S3_BUCKET!;
+  const publicBase = process.env.S3_PUBLIC_URL!.replace(/\/$/, "");
+  const objectUrl = (key: string) => `${endpoint}/${bucket}/${safeKey(key)}`;
+
+  return {
+    async put(key, body, contentType) {
+      const res = await client.fetch(objectUrl(key), {
+        method: "PUT",
+        body: new Uint8Array(body),
+        headers: { "Content-Type": contentType, "Cache-Control": "public, max-age=31536000, immutable" },
+      });
+      if (!res.ok) throw new Error(`Falha no upload (${res.status}): ${await res.text()}`);
+    },
+    async delete(key) {
+      const res = await client.fetch(objectUrl(key), { method: "DELETE" });
+      if (!res.ok && res.status !== 404) throw new Error(`Falha ao remover arquivo (${res.status})`);
+    },
+    publicUrl(key) {
+      return `${publicBase}/${safeKey(key)}`;
+    },
+  };
+}
+
+let instance: Storage | undefined;
+
+export function storage(): Storage {
+  if (!instance) instance = process.env.STORAGE_DRIVER === "s3" ? createS3Storage() : localStorage;
+  return instance;
+}

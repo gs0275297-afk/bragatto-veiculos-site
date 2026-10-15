@@ -1,0 +1,29 @@
+.skeleton {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 400px;
+  gap: 48px;
+  padding-top: calc(var(--header-h) + 72px);
+  padding-bottom: 96px;
+}
+.skMedia,
+.skPanel {
+  background: linear-gradient(90deg, var(--carbon), var(--graphite), var(--carbon));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skMedia {
+  height: clamp(340px, 62svh, 680px);
+}
+.skPanel {
+  height: 560px;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 900px) {
+  .skeleton {
+    grid-template-columns: 1fr;
+  }
+}

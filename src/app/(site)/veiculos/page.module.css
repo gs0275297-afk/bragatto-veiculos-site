@@ -1,0 +1,64 @@
+.head {
+  position: relative;
+  padding-top: calc(var(--header-h) + clamp(40px, 6vw, 88px));
+  padding-bottom: clamp(32px, 4vw, 56px);
+  background:
+    radial-gradient(50% 120% at 100% 0%, rgb(255 255 255 / 0.05), transparent 60%),
+    var(--void);
+  border-bottom: 1px solid var(--line);
+  overflow: hidden;
+}
+.head::after {
+  content: "";
+  position: absolute;
+  right: var(--gutter);
+  bottom: -1px;
+  width: 120px;
+  height: 2px;
+  background: var(--red);
+}
+.title {
+  margin: 22px 0 18px;
+}
+
+.body {
+  padding-top: clamp(28px, 4vw, 48px);
+  padding-bottom: var(--section);
+}
+
+.skeleton {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 48px;
+}
+.skSide {
+  height: 520px;
+  background: linear-gradient(90deg, var(--carbon), var(--graphite), var(--carbon));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+.skGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+  gap: 16px;
+}
+.skCard {
+  aspect-ratio: 4 / 4.6;
+  background: linear-gradient(90deg, var(--carbon), var(--graphite), var(--carbon));
+  background-size: 200% 100%;
+  animation: shimmer 1.4s linear infinite;
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+@media (max-width: 980px) {
+  .skeleton {
+    grid-template-columns: 1fr;
+  }
+  .skSide {
+    height: 48px;
+    width: 140px;
+  }
+}
