@@ -232,10 +232,14 @@ export async function markInitialSeedDone(note: string) {
 }
 
 /** Cadastra os veículos reais fornecidos pela loja. Veículos cujo slug já existe são ignorados. */
-export async function seedInitialStock(log: (msg: string) => void = console.log) {
+export async function seedInitialStock(
+  log: (msg: string) => void = console.log,
+  opts: { publishedOnly?: boolean } = {},
+) {
   const photosDir = path.resolve("seed/photos");
   for (const item of VEHICLES) {
     const input = vehicleInputSchema.parse(item.data);
+    if (opts.publishedOnly && !input.published) continue;
     const slug = vehicleSlugBase({ ...input, yearModel: input.yearModel! });
     const existing = await db.select({ id: schema.vehicles.id }).from(schema.vehicles).where(eq(schema.vehicles.slug, slug));
     if (existing.length) {

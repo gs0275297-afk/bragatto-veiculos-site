@@ -2,7 +2,9 @@
  * Executado automaticamente antes de `next build` (script "prebuild" do npm).
  *
  * Fora da Vercel não faz nada — localmente use `npm run setup`.
- * Na Vercel:
+ * Na Vercel sem banco nem armazenamento conectados → MODO VITRINE: gera o estoque inicial
+ * num banco somente leitura empacotado no deploy (fotos em public/vitrine) e o painel fica desativado.
+ * Na Vercel com Turso + Blob/S3:
  *  1. confere banco remoto (Turso) e armazenamento persistente (Vercel Blob ou S3);
  *  2. aplica as migrações;
  *  3. carrega o estoque inicial real UMA única vez (fica registrado em app_meta);
@@ -13,7 +15,7 @@ import { count, eq } from "drizzle-orm";
 import { migrate } from "drizzle-orm/libsql/migrator";
 import { hashPassword, MIN_PASSWORD_LENGTH } from "@/lib/auth/password";
 import { db, schema } from "@/lib/db/client";
-import { dbConfig } from "@/lib/db/env";
+import { dbConfig, isVitrine } from "@/lib/db/env";
 import { storageDriver } from "@/lib/storage";
 import { isInitialSeedDone, markInitialSeedDone, seedInitialStock } from "./seed-lib";
 
@@ -22,10 +24,28 @@ function fail(lines: string[]): never {
   process.exit(1);
 }
 
+async function buildVitrine() {
+  console.warn(
+    [
+      "",
+      "⚠ MODO VITRINE: nenhum banco (Turso) nem armazenamento (Blob/S3) conectado.",
+      "  O site será publicado com o estoque inicial em modo somente leitura e o painel ficará desativado.",
+      "  Para ativar o painel: Storage → Turso e Storage → Blob no projeto da Vercel, depois Redeploy.",
+      "",
+    ].join("\n"),
+  );
+  await migrate(db, { migrationsFolder: "./drizzle" });
+  await seedInitialStock((m) => console.log(`  ${m}`), { publishedOnly: true });
+  console.log("✓ vitrine gerada");
+}
+
 async function main() {
   if (!process.env.VERCEL) return;
 
   const { url, isLocalFile } = dbConfig();
+  const driver = storageDriver();
+  if (isVitrine() && driver === "static") return buildVitrine();
+
   if (isLocalFile) {
     fail([
       "Falta o banco de dados. Na Vercel o disco não é persistente, então o SQLite local não funciona.",
@@ -35,8 +55,7 @@ async function main() {
     ]);
   }
 
-  const driver = storageDriver();
-  if (driver === "local") {
+  if (driver === "local" || driver === "static") {
     fail([
       "Falta o armazenamento das fotos. Na Vercel os arquivos enviados não ficam salvos no servidor.",
       "No painel do projeto: Storage → Create → Blob → conecte ao projeto (cria BLOB_READ_WRITE_TOKEN).",

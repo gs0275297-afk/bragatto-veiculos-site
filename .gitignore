@@ -48,3 +48,6 @@ next-env.d.ts
 # o site usa as versões tratadas em seed/photos — manter os originais só localmente
 /imagens empresa/
 /veiculos e suas informaçoes/
+
+# gerado no build da Vercel em modo vitrine
+/public/vitrine/

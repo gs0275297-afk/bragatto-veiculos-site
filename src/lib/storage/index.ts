@@ -2,6 +2,7 @@ import { promises as fs } from "node:fs";
 import path from "node:path";
 import { del, put } from "@vercel/blob";
 import { AwsClient } from "aws4fetch";
+import { isBuildPhase } from "@/lib/db/env";
 
 /**
  * Armazenamento de imagens e modelos 3D.
@@ -10,16 +11,18 @@ import { AwsClient } from "aws4fetch";
  *   Adequado para servidor próprio/VPS com disco persistente.
  * - `vercel-blob`: Vercel Blob (ativado automaticamente quando existe BLOB_READ_WRITE_TOKEN).
  * - `s3`: qualquer serviço compatível com S3 (Cloudflare R2, AWS S3, Backblaze B2...).
+ * - `static`: modo vitrine na Vercel sem armazenamento conectado — os arquivos são gerados
+ *   no build em public/vitrine e servidos como estáticos; nada pode ser enviado depois.
  * Em hospedagem serverless (Vercel) o disco não é persistente: use `vercel-blob` ou `s3`.
  */
-export type StorageDriver = "local" | "s3" | "vercel-blob";
+export type StorageDriver = "local" | "s3" | "vercel-blob" | "static";
 
 export function storageDriver(): StorageDriver {
   const explicit = process.env.STORAGE_DRIVER;
   if (explicit === "local" || explicit === "s3" || explicit === "vercel-blob") return explicit;
   if (process.env.BLOB_READ_WRITE_TOKEN) return "vercel-blob";
   if (process.env.S3_BUCKET && process.env.S3_ENDPOINT) return "s3";
-  return "local";
+  return process.env.VERCEL ? "static" : "local";
 }
 
 /** URL pública base do Vercel Blob: https://<store>.public.blob.vercel-storage.com */
@@ -125,12 +128,41 @@ function createBlobStorage(): Storage {
   };
 }
 
+export class ReadOnlyStorageError extends Error {
+  constructor() {
+    super("Envio de arquivos desativado: conecte um armazenamento (Vercel Blob ou S3) ao projeto.");
+  }
+}
+
+/** Arquivos gravados em public/vitrine durante o build e servidos como estáticos. */
+const staticStorage: Storage = {
+  async put(key, body) {
+    if (!isBuildPhase()) throw new ReadOnlyStorageError();
+    const full = path.join(/*turbopackIgnore: true*/ process.cwd(), "public", "vitrine", safeKey(key));
+    await fs.mkdir(path.dirname(full), { recursive: true });
+    await fs.writeFile(full, body);
+  },
+  async delete() {
+    throw new ReadOnlyStorageError();
+  },
+  publicUrl(key) {
+    return `/vitrine/${safeKey(key)}`;
+  },
+};
+
 let instance: Storage | undefined;
 
 export function storage(): Storage {
   if (!instance) {
     const driver = storageDriver();
-    instance = driver === "s3" ? createS3Storage() : driver === "vercel-blob" ? createBlobStorage() : localStorage;
+    instance =
+      driver === "s3"
+        ? createS3Storage()
+        : driver === "vercel-blob"
+          ? createBlobStorage()
+          : driver === "static"
+            ? staticStorage
+            : localStorage;
   }
   return instance;
 }

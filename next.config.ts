@@ -23,6 +23,11 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   serverExternalPackages: ["sharp", "@libsql/client"],
+  // modo vitrine (Vercel sem banco remoto): banco somente leitura gerado no build
+  outputFileTracingIncludes: {
+    "/*": ["./data/vitrine.db"],
+    "/**": ["./data/vitrine.db"],
+  },
   images: {
     formats: ["image/avif", "image/webp"],
     qualities: [60, 75, 85],
@@ -31,6 +36,7 @@ const nextConfig: NextConfig = {
     localPatterns: [
       { pathname: "/media/**", search: "" },
       { pathname: "/brand/**", search: "" },
+      { pathname: "/vitrine/**", search: "" },
     ],
     remotePatterns,
   },

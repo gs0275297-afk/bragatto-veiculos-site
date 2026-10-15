@@ -107,6 +107,8 @@ npx @gltf-transform/cli optimize entrada.glb saida.glb --compress draco --textur
 3. **Primeiro acesso:** em *Settings → Environment Variables*, crie `ADMIN_EMAIL` e `ADMIN_PASSWORD` (mín. 10 caracteres; opcional `ADMIN_NAME`).
 4. *Deployments* → **Redeploy**.
 
+**Modo vitrine:** se o projeto for publicado na Vercel **sem** Turso e sem Blob, o build não falha: o site vai ao ar com o estoque inicial em modo somente leitura (banco empacotado no deploy, fotos estáticas) e o painel mostra que está desativado. Ao conectar Turso + Blob e fazer Redeploy, o modo completo é ativado automaticamente.
+
 No build, o script `scripts/prebuild.ts` confere essas variáveis (e explica o que falta, se for o caso), aplica as migrações, carrega o **estoque inicial real uma única vez** (as fotos vão para o Blob) e cria o administrador se ainda não houver usuários. Depois do primeiro login, troque a senha em *Minha conta* e apague `ADMIN_PASSWORD` das variáveis.
 
 `NEXT_PUBLIC_SITE_URL` é opcional na Vercel (usa o domínio de produção); defina quando tiver domínio próprio. Com Blob, o modelo 3D vai do navegador direto para o armazenamento (sem o limite de 4,5 MB das funções) e é validado no servidor antes de ser associado; fotos grandes são reduzidas no navegador antes do envio. Com R2/S3 na Vercel, o upload de GLB pelo painel fica limitado a ~4 MB — para arquivos maiores, use a opção de URL.

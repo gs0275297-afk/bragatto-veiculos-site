@@ -7,6 +7,7 @@ import { updateTag } from "next/cache";
 import { and, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db, schema } from "@/lib/db/client";
+import { isVitrine } from "@/lib/db/env";
 import { DUMMY_HASH, hashPassword, MIN_PASSWORD_LENGTH, verifyPassword } from "@/lib/auth/password";
 import { canAttempt, clearFailures, registerFailure } from "@/lib/auth/rate-limit";
 import { createSession, destroySession, requireOwner, requireUser, revokeUserSessions } from "@/lib/auth/session";
@@ -30,6 +31,7 @@ const fieldErrors = (error: z.ZodError) => {
 // ---------------------------------------------------------------- autenticação
 
 export async function loginAction(_prev: FormState, formData: FormData): Promise<FormState> {
+  if (isVitrine()) return { message: "Painel desativado: conecte o banco (Turso) e o armazenamento (Blob) na Vercel." };
   const email = String(formData.get("email") ?? "").trim().toLowerCase();
   const password = String(formData.get("password") ?? "");
   const ip = ((await headers()).get("x-forwarded-for") ?? "local").split(",")[0].trim();
